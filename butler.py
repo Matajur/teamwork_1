@@ -25,6 +25,10 @@ class Phone():
     def __init__(self, phone: str) -> None:
         self.phone = phone
 
+    def phone_validator(phone: str):
+        if re.fullmatch(r'\+[\d]{2}\([\d]{3}\)[\d]{7}', phone):
+            return True
+
     def __str__(self) -> str:
         return f'{self.phone}'
 
@@ -33,13 +37,24 @@ class Email():
     def __init__(self, email: str) -> None:
         self.email = email
 
+    def email_validator(email: str):
+        if re.fullmatch(r'[a-zA-Z]{1}[\w\.]+@[a-zA-Z]+\.[a-zA-Z]{2,3}', email):
+            return True
+
     def __str__(self) -> str:
         return f'{self.email}'
 
 
 class Birthday():
     def __init__(self, birthday: str) -> None:
-        self.birthday = birthday
+        self.birthday = datetime.strptime(birthday, '%Y.%m.%d').date()
+
+    def date_validator(birthday: str):
+        try:
+            if 100*365 > (datetime.today() - datetime.strptime(birthday, '%Y.%m.%d')).days > 0:
+                return True
+        except:
+            None
 
     def __str__(self) -> str:
         return f'{self.birthday}'
@@ -85,8 +100,7 @@ class Record:
         self.address = address
 
     def add_phone(self, phone: Phone | str):
-        if isinstance(phone, str):
-            phone = self.create_phone(phone)
+        phone = self.create_phone(phone)
         self.phones.append(phone)
 
     def add_email(self, email: Email):
@@ -156,21 +170,21 @@ class AddressBook(UserDict):
             self.add_notice(notice)
 
     def add_record(self, record: Record):
-        self.records[record.name] = record
+        self.records[record.name.name] = record
 
     def add_notice(self, notice: Notice):
-        self.notes[notice.hashtag] = notice
+        self.notes[notice.hashtag.hashtag] = notice
 
     def iterator(self, N, essence):
         counter = 0
-        result = f'\nPrinting {N} records'
+        result = f'\nPrinting {N} contacts'
         for item, record in self.essence.items():
             result += f'\n{str(record)}'
             counter += 1
             if counter >= N:
                 yield result
                 counter = 0
-                result = f'\nPrinting next {N} records'
+                result = f'\nPrinting next {N} contacts'
 
     def __str__(self) -> str:
         return '\n'.join(str(record) for record in self.records.values())
@@ -193,7 +207,7 @@ def copy_class_addressbook(address_book):
 
 
 def unknown_command(command: str) -> str:
-    return f'\nUnknown command "{command}"'
+    return f'\nUnknown command "{command}"\n'
 
 
 def hello_user() -> str:
@@ -207,29 +221,66 @@ def exit_func() -> str:
     return 'Goodbye!'
 
 
+def phone_adder(record) -> None:
+    while True:
+        phone = input(
+            'Enter phone (ex. +38(099)1234567) or press Enter to skip: ')
+        if phone == '':
+            break
+        elif Phone.phone_validator(phone) == True:
+            record.add_phone(Phone(phone))
+            break
+        else:
+            print('Wrong phone format')
+
+
+def email_adder(record) -> None:
+    while True:
+        email = input('Enter email or press Enter to skip: ')
+        if email == '':
+            break
+        elif Email.email_validator(email) == True:
+            record.add_email(Email(email))
+            break
+        else:
+            print('Wrong email format')
+
+
+def birthday_adder(record) -> None:
+    while True:
+        birthday = input(
+            'Enter birthday (ex. 2023.12.25) or press Enter to skip: ')
+        if birthday == '':
+            break
+        elif Birthday.date_validator(birthday) == True:
+            record.add_birthday(Birthday(birthday))
+            break
+        else:
+            print('Wrong date format')
+
+
 def contact_adder() -> str:
     name = input('Enter contact name (obligatory field): ')
-    if name in address_book.records.keys():
-        return f'Contact {name} already exists'
+    while True:
+        if name == '':
+            name = input('Contact name cannot be empty, enter contact name: ')
+        elif name in address_book.records.keys():
+            name = input(
+                f'Contact "{name}" already exists, enter new name o press Enter to exit: ')
+            if name == '':
+                return 'Adding new contact was skipped\n'
+        else:
+            break
 
     record = Record(Name(name))
 
     address = input('Enter address or press Enter to skip: ')
     if address:
-        record.add_address(address)
+        record.add_address(Address(address))
 
-    phone = input('Enter phone (ex. +38(099)9119119) or press Enter to skip: ')
-    if phone:
-        record.add_phone(phone)
-
-    email = input('Enter email or press Enter to skip: ')
-    if email:
-        record.add_email(email)
-
-    birthday = input(
-        'Enter birthday (ex. 2023.12.25) or press Enter to skip: ')
-    if birthday:
-        record.add_birthday(birthday)
+    phone_adder(record)
+    email_adder(record)
+    birthday_adder(record)
 
     address_book.add_record(record)
 
@@ -294,11 +345,11 @@ def note_adder():
     if not hashtag:
         hashtag = '#None'
 
-    notice = Notice(Note(hashtag))
+    notice = Notice(Hashtag(hashtag))
 
     note = input('Enter note: ')
     if note:
-        notice.add_note(note)
+        notice.add_note(Note(note))
 
     address_book.add_notice(notice)
 
