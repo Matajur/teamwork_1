@@ -113,7 +113,7 @@ class Record:
     def create_phone(self, phone: str):
         return Phone(phone)
 
-    def show(self):         # returns phones in beautiful formating
+    def show(self):         # returns phones in nice formating
         if self.phones:
             result = ''
             for inx, p in enumerate(self.phones):
@@ -146,7 +146,7 @@ class Notice:
     def create_note(self, note: str):
         return Note(note)
 
-    def show(self):         # returns notes in beautiful formating
+    def show(self):         # returns notes in nice formating
         if self.notes:
             result = ''
             for inx, n in enumerate(self.notes):
@@ -175,6 +175,14 @@ class AddressBook(UserDict):
 
     def add_notice(self, notice: Notice):
         self.notes[notice.hashtag.hashtag] = notice
+
+    def note_searcher(self, keyword: str):
+        result = []
+        for notice in self.notes.values():
+            for note in notice.notes:
+                if keyword.lower() in note.note.lower():
+                    result.append(note)
+        return result
 
     def iterator(self, N, essence):
         counter = 0
@@ -477,6 +485,18 @@ def show_all_notes() -> str:
         return 'No records, please add\n'
 
 
+def note_search_handler():
+    keyword = input('Enter a keyword to search: ')
+    if keyword:
+        result = address_book.note_searcher(keyword)
+        if result:
+            return f'\nFound {len(result)} notes:\n' + '\n'.join(str(note) for note in result)
+        else:
+            return 'No notes found.'
+    else:
+        return 'Keyword cannot be empty.'
+
+
 # File sorting
 
 
@@ -528,23 +548,25 @@ def sort_files():
 
 commands = {
     'hello':        (hello_user,            ' -> just greating'),
-    'add contact':  (contact_adder,         ' -> adds new contact'),
-    '+c':           (contact_adder,         ' -> adds new contact (short command)'),
-    'show contacts': (show_all_contacts,    ' -> shows all contacts'),
-    '?c':           (show_all_contacts,     ' -> shows all contacts (short command)'),
     'exit':         (exit_func,             ' -> exit from the bot with or without saving'),
     'close':        (exit_func,             ' -> exit from the bot with or without saving'),
     'save':         (saver,                 ' -> saves to file all changes'),
     'load':         (loader,                ' -> loads last version of the Address Book'),
     'help':         (helper,                ' -> shows the list of all supported commands'),
-    'add note':     (note_adder,            ' -> adds note with o without hashtag'),
-    '+n':           (note_adder,            ' -> adds note with o without hashtag (short command)'),
-    'show notes':   (show_all_notes,        ' -> shows all notes'),
-    '?n':           (show_all_notes,        ' -> shows all notes (short command)'),
+    'add contact':  (contact_adder,         ' -> adds new contact'),
+    '+c':           (contact_adder,         ' -> adds new contact (short command)'),
+    'show contacts': (show_all_contacts,    ' -> shows all contacts'),
+    '?c':           (show_all_contacts,     ' -> shows all contacts (short command)'),
     'search':       (contact_search,        ' -> search for a contact by name'),
     'modify':       (contact_modifier,      ' -> modify an existing contact'),
     'remove':       (contact_remover,       ' -> remove an existing contact'),
     'to birthdays': (days_to_birthdays,     ' -> days to birthgays'),
+    'add note':     (note_adder,            ' -> adds note with o without hashtag'),
+    '+n':           (note_adder,            ' -> adds note with o without hashtag (short command)'),
+    'show notes':   (show_all_notes,        ' -> shows all notes'),
+    '?n':           (show_all_notes,        ' -> shows all notes (short command)'),
+    'search notes': (note_search_handler, ' -> searches for notes containing a keyword'),
+    '?s':           (note_search_handler, ' -> searches for notes containing a keyword (short command)'),
     'sort files':   (sort_files,            ' -> sorts files into categories'),
 }
 
