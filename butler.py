@@ -123,7 +123,7 @@ class Record:
         return result
 
     def __str__(self) -> str:
-        return f'Contact Name: {self.name},\nAddress: {self.address},\nPhones: {self.show()},\nEmail: {self.email},\nBirthday: {self.birthday}\n'
+        return f'Name:     {self.name},\nAddress:  {self.address},\nPhones:   {self.show()},\nEmail:    {self.email},\nBirthday: {self.birthday}\n'
 
 
 class Notice:
@@ -183,16 +183,17 @@ class AddressBook(UserDict):
                 if keyword.lower() in note.note.lower():
                     result.append(note)
         return result
-    
+
     def hashtag_searcher(self, keyword: str):
         result = []
         for notice in self.notes.values():
             if keyword.lower() in notice.hashtag.hashtag.lower():
                 result.append(notice)
         return result
-    
+
     def sort_notes(self):
-        sorted_notes = sorted(self.notes.values(), key=lambda notice: str(notice.hashtag))
+        sorted_notes = sorted(self.notes.values(),
+                              key=lambda notice: str(notice.hashtag))
         return sorted_notes
 
     def iterator(self, N, essence):
@@ -241,16 +242,16 @@ def exit_func() -> str:
     a = input('Would you like to save changes (Y/N)? ')
     if a == 'Y' or a == 'y':
         print(saver())
-    return 'Goodbye!'
+    return 'Goodbye!\n'
 
 
 def saver() -> str:
     if address_book.records:
         with open('backup.dat', 'wb') as file:
             pickle.dump(address_book, file)
-        return '\nAddress Book successfully saved to backup.dat\n'
+        return '\nAddress Book successfully saved to backup.dat'
     else:
-        return '\nAddress Book is empty, no data to be saved to file\n'
+        return '\nAddress Book is empty, no data to be saved to file'
 
 
 def loader() -> str:
@@ -315,7 +316,10 @@ def contact_adder() -> str:
     name = input('Enter contact name (obligatory field): ')
     while True:
         if name == '':
-            name = input('Contact name cannot be empty, enter contact name: ')
+            name = input(
+                'Contact name cannot be empty, enter contact name o Enter to exit: ')
+            if name == '':
+                return 'Adding new contact was skipped\n'
         elif name in address_book.records.keys():
             name = input(
                 f'Contact "{name}" already exists, enter new name o press Enter to exit: ')
@@ -336,7 +340,7 @@ def contact_adder() -> str:
 
     address_book.add_record(record)
 
-    return f'\nAdded {record}'
+    return f'\nAdded contact\n{record}'
 
 
 def show_all_contacts() -> str:
@@ -519,15 +523,15 @@ def hashtag_search_handler():
     else:
         return 'Hashtag cannot be empty.'
 
-    
+
 def sort_notes_handler():
     sorted_notes = address_book.sort_notes()
     if sorted_notes:
         return f'\nSorted notes:\n' + '\n'.join(str(note) for note in sorted_notes)
     else:
-        return 'No notes found.'    
+        return 'No notes found.'
 
-    
+
 # File sorting
 
 
@@ -596,12 +600,12 @@ commands = {
     '+n':           (note_adder,            ' -> adds note with o without hashtag (short command)'),
     'show notes':   (show_all_notes,        ' -> shows all notes'),
     '?n':           (show_all_notes,        ' -> shows all notes (short command)'),
-    'search notes': (note_search_handler, ' -> searches for notes containing a keyword'),
-    '?s':           (note_search_handler, ' -> searches for notes containing a keyword (short command)'),
+    'search notes': (note_search_handler,   ' -> searches for notes containing a keyword'),
+    '?s':           (note_search_handler,   ' -> searches for notes containing a keyword (short command)'),
     'search hashtag': (hashtag_search_handler, ' -> search notes by hashtag'),
     '?h':           (hashtag_search_handler, ' -> search notes by hashtag (short command)'),
     'sort notes':   (sort_notes_handler,    ' -> sort notes by title'),
-    'so':           (sort_notes_handler,    ' -> sort notes by title (short command)')
+    'so':           (sort_notes_handler,    ' -> sort notes by title (short command)'),
     'sort files':   (sort_files,            ' -> sorts files into categories'),
 }
 
@@ -621,7 +625,7 @@ def main():
         else:
             handler = commands.get(command)[0]
             result = handler()
-            if result == 'Goodbye!':
+            if result == 'Goodbye!\n':
                 print(result)
                 break
         print(result)
