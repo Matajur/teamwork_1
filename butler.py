@@ -378,7 +378,55 @@ def show_all_notes() -> str:
                 return f'{str(list(address_book.notes.values())[-1])}\nEnd of records\n'
     else:
         return 'No records, please add\n'
+    
+    
+def sort_files():
+    folder_path = input("Enter the absolute path of the folder you want to sort (example: C:\Desktop\project): ")
+    folder_path = folder_path.strip()
 
+    if not os.path.isdir(folder_path):
+        return "Invalid folder path."
+
+    categorized_files = {}
+
+    for file_name in os.listdir(folder_path):
+        if os.path.isfile(os.path.join(folder_path, file_name)):
+            if file_name in ("butler.py", "backup.dat"):
+                continue
+
+            file_extension = os.path.splitext(file_name)[1]
+            category = "Other"
+            if file_extension in (".jpg", ".png", ".gif"):
+                category = "Images"
+            elif file_extension in (".doc", ".docx", ".pdf"):
+                category = "Documents"
+            elif file_extension in (".mp4", ".avi", ".mov"):
+                category = "Videos"
+
+            if category not in categorized_files:
+                categorized_files[category] = []
+
+            categorized_files[category].append(file_name)
+
+    if not categorized_files:
+        return "No files found for sorting."
+
+    for category in categorized_files.keys():
+        category_folder = os.path.join(folder_path, category)
+        os.makedirs(category_folder, exist_ok=True)
+
+    for category, files in categorized_files.items():
+        category_folder = os.path.join(folder_path, category)
+        for file_name in files:
+            source_path = os.path.join(folder_path, file_name)
+            destination_path = os.path.join(category_folder, file_name)
+            shutil.move(source_path, destination_path)
+
+    return "File sorting completed successfully."
+
+def sort_files_handler():
+    categorized_files = sort_files()
+    return categorized_files
 
 commands = {
     'hello':        (hello_user,            ' -> just greating'),
@@ -395,6 +443,7 @@ commands = {
     '+n':           (note_adder,            ' -> adds note with o without hashtag (short command)'),
     'show notes':   (show_all_notes,        ' -> shows all notes'),
     '?n':           (show_all_notes,        ' -> shows all notes (short command)'),
+    'sort files':   (sort_files_handler,    ' -> sorts files into categories'),
 }
 
 
