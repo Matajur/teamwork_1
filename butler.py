@@ -101,8 +101,7 @@ class Record:
     def add_address(self, address: Address):
         self.address = address
 
-    def add_phone(self, phone: Phone | str):
-        phone = self.create_phone(phone)
+    def add_phone(self, phone: Phone):
         self.phones.append(phone)
 
     def add_email(self, email: Email):
@@ -204,6 +203,9 @@ class AddressBook(UserDict):
 address_book = AddressBook()
 
 
+# General functionality
+
+
 def copy_class_addressbook(address_book):
     return deepcopy(address_book)
 
@@ -221,6 +223,35 @@ def exit_func() -> str:
     if a == 'Y' or a == 'y':
         print(saver())
     return 'Goodbye!'
+
+
+def saver() -> str:
+    if address_book.records:
+        with open('backup.dat', 'wb') as file:
+            pickle.dump(address_book, file)
+        return '\nAddress Book successfully saved to backup.dat\n'
+    else:
+        return '\nAddress Book is empty, no data to be saved to file\n'
+
+
+def loader() -> str:
+    try:
+        with open('backup.dat', 'rb') as file:
+            global address_book
+            address_book = pickle.load(file)
+        return '\nAddress Book successfully loaded from backup.dat\n'
+    except:
+        return ''
+
+
+def helper():
+    result = 'List of all supported commands:\n\n'
+    for key in commands:
+        result += '{:<13} {:<50}\n'.format(key, commands[key][1])
+    return result
+
+
+# Contacts processing
 
 
 def phone_adder(record) -> None:
@@ -313,30 +344,94 @@ def show_all_contacts() -> str:
         return 'No contacts, please add\n'
 
 
-def saver() -> str:
-    if address_book.records:
-        with open('backup.dat', 'wb') as file:
-            pickle.dump(address_book, file)
-        return '\nAddress Book successfully saved to backup.dat\n'
-    else:
-        return '\nAddress Book is empty, no data to be saved to file\n'
+def contact_search() -> str:
+    name = input('Enter contact name: ')
+    name = name.lower()
+    search_contacts = []
+    for record in address_book.records.values():
+        if name in record.name.name.lower():
+            search_contacts.append(record)
+    if search_contacts:
+        contacts_info = '\n'.join(str(record) for record in search_contacts)
+        return f'\nContact found:\n{contacts_info}'
+    return f'Contact "{name}" not found'
 
 
-def loader() -> str:
-    try:
-        with open('backup.dat', 'rb') as file:
-            global address_book
-            address_book = pickle.load(file)
-        return '\nAddress Book successfully loaded from backup.dat\n'
-    except:
-        return ''
+def contact_modifier():
+    name = input('Enter contact name: ')
+    for record_name, contact in address_book.records.items():
+        if contact.name.name == name:
+            print(f'Current contact information:\n{contact}')
+            field = input(
+                'Enter the field you want to modify (name/address/phone/email/birthday): ')
+            value = input('Enter the new value: ')
+            if field.lower() == 'name':
+                contact.name.name = value
+                address_book.records[value] = contact
+                del address_book.records[record_name]
+                return f'Contact "{name}" has been modified. New name: "{value}"'
+            elif field.lower() == 'address':
+                contact.address = Address(value)
+                return f'Contact "{name}" has been modified. New address: "{value}"'
+            elif field.lower() == 'phone':
+                if Phone.phone_validator(value) == True:
+                    contact.phones[0] = Phone(value)
+                    return f'Contact "{name}" has been modified. New phone number: "{value}"'
+                else:
+                    return 'Wrong phone format, phone was not modified'
+            elif field.lower() == 'email':
+                if Email.email_validator(value) == True:
+                    contact.email = Email(value)
+                    return f'Contact "{name}" has been modified. New email: "{value}"'
+                else:
+                    return 'Wrong phone format'
+            elif field.lower() == 'birthday':
+                if Birthday.date_validator(value) == True:
+                    contact.birthday = Birthday(value)
+                    return f'Contact "{name}" has been modified. New birthday: "{value}"'
+                else:
+                    return 'Wrong date format'
+            else:
+                return 'Invalid field name. Modification failed.'
+    return f'Contact "{name}" not found'
 
 
-def helper():
-    result = 'List of all supported commands:\n\n'
-    for key in commands:
-        result += '{:<13} {:<50}\n'.format(key, commands[key][1])
-    return result
+def contact_remover() -> str:
+    name = input('Enter contact name: ')
+    for record_name, record in address_book.records.items():
+        if record.name.name == name:
+            del address_book.records[record_name]
+            return f'Contact "{name}" has been removed\n'
+    return f'Contact "{name}" not found\n'
+
+
+def days_to_birthdays() -> str:
+    days = int(input('Enter the number of days: '))
+    today = datetime.today().date()
+    contacts_in_days = []
+    has_birthday = False
+
+    for record in address_book.records.values():
+        if record.birthday is not None:
+            dob = record.birthday.birthday
+            dob_this_year = dob.replace(year=today.year)
+
+            if dob_this_year < today:
+                dob_this_year = dob_this_year.replace(year=today.year + 1)
+
+            days_to_birthday = (dob_this_year - today).days
+            if days_to_birthday <= days:
+                contacts_in_days.append(record)
+                has_birthday = True
+        if not has_birthday:
+            return "\nNo contacts with upcoming birthdays\n"
+        result = f"\nContacts with upcoming birthdays in the next {days} days:"
+        for record in contacts_in_days:
+            result += '\n' + str(record)
+            return result
+
+
+# Notes processing
 
 
 def note_adder():
@@ -380,10 +475,14 @@ def show_all_notes() -> str:
                 return f'{str(list(address_book.notes.values())[-1])}\nEnd of records\n'
     else:
         return 'No records, please add\n'
-    
-    
+
+
+# File sorting
+
+
 def sort_files():
-    folder_path = input("Enter the absolute path of the folder you want to sort (example: C:\Desktop\project): ")
+    folder_path = input(
+        "Enter the absolute path of the folder you want to sort (example: C:\Desktop\project): ")
     folder_path = folder_path.strip()
 
     if not os.path.isdir(folder_path):
@@ -426,9 +525,6 @@ def sort_files():
 
     return "File sorting completed successfully."
 
-def sort_files_handler():
-    categorized_files = sort_files()
-    return categorized_files
 
 commands = {
     'hello':        (hello_user,            ' -> just greating'),
@@ -445,7 +541,11 @@ commands = {
     '+n':           (note_adder,            ' -> adds note with o without hashtag (short command)'),
     'show notes':   (show_all_notes,        ' -> shows all notes'),
     '?n':           (show_all_notes,        ' -> shows all notes (short command)'),
-    'sort files':   (sort_files_handler,    ' -> sorts files into categories'),
+    'search':       (contact_search,        ' -> search for a contact by name'),
+    'modify':       (contact_modifier,      ' -> modify an existing contact'),
+    'remove':       (contact_remover,       ' -> remove an existing contact'),
+    'to birthdays': (days_to_birthdays,     ' -> days to birthgays'),
+    'sort files':   (sort_files,            ' -> sorts files into categories'),
 }
 
 
