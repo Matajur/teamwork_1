@@ -3,6 +3,7 @@ import re
 from collections import UserDict
 from datetime import datetime
 from copy import deepcopy
+import shutil
 
 
 class Name():
@@ -427,7 +428,6 @@ def sort_files():
 def sort_files_handler():
     categorized_files = sort_files()
     return categorized_files
-
 
 commands = {
     'hello':        (hello_user,            ' -> just greating'),
