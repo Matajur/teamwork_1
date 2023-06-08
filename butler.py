@@ -183,6 +183,17 @@ class AddressBook(UserDict):
                 if keyword.lower() in note.note.lower():
                     result.append(note)
         return result
+    
+    def hashtag_searcher(self, keyword: str):
+        result = []
+        for notice in self.notes.values():
+            if keyword.lower() in notice.hashtag.hashtag.lower():
+                result.append(notice)
+        return result
+    
+    def sort_notes(self):
+        sorted_notes = sorted(self.notes.values(), key=lambda notice: str(notice.hashtag))
+        return sorted_notes
 
     def iterator(self, N, essence):
         counter = 0
@@ -497,6 +508,26 @@ def note_search_handler():
         return 'Keyword cannot be empty.'
 
 
+def hashtag_search_handler():
+    keyword = input('Enter a hashtag to search: ')
+    if keyword:
+        result = address_book.hashtag_searcher(keyword)
+        if result:
+            return f'\nFound {len(result)} notes:\n' + '\n'.join(str(note) for note in result)
+        else:
+            return 'No notes found.'
+    else:
+        return 'Hashtag cannot be empty.'
+
+    
+def sort_notes_handler():
+    sorted_notes = address_book.sort_notes()
+    if sorted_notes:
+        return f'\nSorted notes:\n' + '\n'.join(str(note) for note in sorted_notes)
+    else:
+        return 'No notes found.'    
+
+    
 # File sorting
 
 
@@ -567,6 +598,10 @@ commands = {
     '?n':           (show_all_notes,        ' -> shows all notes (short command)'),
     'search notes': (note_search_handler, ' -> searches for notes containing a keyword'),
     '?s':           (note_search_handler, ' -> searches for notes containing a keyword (short command)'),
+    'search hashtag': (hashtag_search_handler, ' -> search notes by hashtag'),
+    '?h':           (hashtag_search_handler, ' -> search notes by hashtag (short command)'),
+    'sort notes':   (sort_notes_handler,    ' -> sort notes by title'),
+    'so':           (sort_notes_handler,    ' -> sort notes by title (short command)')
     'sort files':   (sort_files,            ' -> sorts files into categories'),
 }
 
