@@ -5,6 +5,7 @@ from datetime import datetime
 from copy import deepcopy
 import os
 import shutil
+from difflib import SequenceMatcher
 
 
 class Name():
@@ -79,7 +80,7 @@ class Note():
 
 
 class Record:
-    def __init__(self, name: Name, address: Address = None, phone: Phone = None, email: Email = None, birthday: Birthday = None):
+    def __init__(self, name: Name, address: Address = None, phone: list[Phone] = None, email: Email = None, birthday: Birthday = None):
         self.name = name
 
         self.address = address
@@ -88,7 +89,8 @@ class Record:
 
         self.phones = []
         if phone is not None:
-            self.add_phone(phone)
+            for p in phone:
+                self.add_phone(p)
 
         self.email = email
         if email is not None:
@@ -199,7 +201,7 @@ class AddressBook(UserDict):
     def iterator(self, N, essence):
         counter = 0
         result = f'\nPrinting {N} contacts'
-        for item, record in self.essence.items():
+        for item, record in essence.items():
             result += f'\n{str(record)}'
             counter += 1
             if counter >= N:
@@ -231,7 +233,33 @@ def copy_class_addressbook(address_book):
 
 
 def unknown_command(command: str) -> str:
-    return f'\nUnknown command "{command}"\n'
+    if len(command) < 4:
+        return f'\nUnknown command "{command}"\n'
+    else:
+        result = ''
+        subcomands = command.split(' ')
+        for key, value in commands.items():
+
+            for el in subcomands:
+                if len(el) > 2 and el in key:
+                    if key not in result:
+                        result += f'{key}{value[1]}\n'
+
+            if len(key) >= len(command):
+                start = 0
+                end = len(command) - 1
+                while True:
+                    if SequenceMatcher(a=command, b=key[start:end]).ratio() > 0.6 and key not in result:
+                        result += f'{key}{value[1]}\n'
+                    start += 1
+                    end += 1
+                    if end > len(key) - 1:
+                        break
+
+        if result:
+            return f'\nUnknown command "{command}"\nPossibel commands:\n{result}'
+        else:
+            return f'\nUnknown command "{command}"\n'
 
 
 def hello_user() -> str:
@@ -334,7 +362,16 @@ def contact_adder() -> str:
     if address:
         record.add_address(Address(address))
 
-    phone_adder(record)
+    while True:
+        phone = input(
+            'Enter phone (ex. +38(099)1234567) or press Enter to skip: ')
+        if phone == '':
+            break
+        elif Phone.phone_validator(phone) == True:
+            record.add_phone(Phone(phone))
+        else:
+            print('Wrong phone format')
+
     email_adder(record)
     birthday_adder(record)
 
@@ -368,47 +405,96 @@ def show_all_contacts() -> str:
 
 
 def contact_search() -> str:
-    name = input('Enter contact name: ')
-    name = name.lower()
-    search_contacts = []
+    search_query = input('Enter search query: ')
+    search_query = search_query.lower()
+
+    search_results = []
     for record in address_book.records.values():
-        if name in record.name.name.lower():
-            search_contacts.append(record)
-    if search_contacts:
-        contacts_info = '\n'.join(str(record) for record in search_contacts)
-        return f'\nContact found:\n{contacts_info}'
-    return f'Contact "{name}" not found'
+        if (record.name.name and search_query in record.name.name.lower()) or \
+           (record.address and search_query in record.address.lower()) or \
+           (record.email and search_query in record.email.lower()) or \
+           (record.birthday and search_query in str(record.birthday)) or \
+                any(search_query in phone.phone for phone in record.phones):
+            search_results.append(record)
+
+    if search_results:
+        contacts_info = '\n'.join(str(record) for record in search_results)
+        return f'\nContacts found:\n{contacts_info}'
+
+    return f'No contacts found for "{search_query}"'
 
 
 def contact_modifier():
     name = input('Enter contact name: ')
     for record_name, contact in address_book.records.items():
-        if contact.name.name == name:
+        if contact.name.name.lower() == name.lower():
             print(f'Current contact information:\n{contact}')
             field = input(
                 'Enter the field you want to modify (name/address/phone/email/birthday): ')
-            value = input('Enter the new value: ')
+
             if field.lower() == 'name':
+                value = input('Enter the new value: ')
                 contact.name.name = value
                 address_book.records[value] = contact
                 del address_book.records[record_name]
                 return f'Contact "{name}" has been modified. New name: "{value}"'
             elif field.lower() == 'address':
+                value = input('Enter the new value: ')
                 contact.address = Address(value)
                 return f'Contact "{name}" has been modified. New address: "{value}"'
             elif field.lower() == 'phone':
-                if Phone.phone_validator(value) == True:
-                    contact.phones[0] = Phone(value)
-                    return f'Contact "{name}" has been modified. New phone number: "{value}"'
+                phone_count = len(contact.phones)
+                if phone_count == 0:
+                    action = input('Enter "add" to add a new phone number: ')
+                    if action.lower() == 'add':
+                        phone = input(
+                            'Enter the new phone number (ex. +38(099)1234567): ')
+                        if Phone.phone_validator(phone):
+                            contact.phones.append(Phone(phone))
+                            return f'Contact "{name}" has been modified. New phone number added: {phone}'
+                        else:
+                            return 'Wrong phone format'
+                    else:
+                        return 'Invalid action. Modification failed.'
                 else:
-                    return 'Wrong phone format, phone was not modified'
+                    print('Current phone numbers:')
+                    for i, phone in enumerate(contact.phones):
+                        print(f'{i + 1}. {phone}')
+                    selection = int(input(
+                        f'Select the phone number you want to modify or enter "{phone_count + 1}" to add a new phone number: '))
+                    if 1 <= selection <= phone_count:
+                        action = input(
+                            'Enter "replace" to replace the phone number: ')
+                        if action.lower() == 'replace':
+                            phone = input(
+                                'Enter the new phone number (ex. +38(099)1234567): ')
+                            if Phone.phone_validator(phone):
+                                contact.phones[selection - 1] = Phone(phone)
+                                return f'Contact "{name}" has been modified. New phone number: {phone}'
+                            else:
+                                return 'Wrong phone format'
+                        else:
+                            return 'Invalid action. Modification failed.'
+                    elif selection == phone_count + 1:
+                        phone = input(
+                            'Enter the new phone number (ex. +38(099)1234567): ')
+                        if Phone.phone_validator(phone):
+                            contact.phones.append(Phone(phone))
+                            return f'Contact "{name}" has been modified. New phone number added: {phone}'
+                        else:
+                            return 'Wrong phone format'
+                    else:
+                        return 'Invalid selection. Modification failed.'
+
             elif field.lower() == 'email':
+                value = input('Enter the new value: ')
                 if Email.email_validator(value) == True:
                     contact.email = Email(value)
                     return f'Contact "{name}" has been modified. New email: "{value}"'
                 else:
-                    return 'Wrong phone format'
+                    return 'Wrong email format'
             elif field.lower() == 'birthday':
+                value = input('Enter the new value (ex. 2023.12.25): ')
                 if Birthday.date_validator(value) == True:
                     contact.birthday = Birthday(value)
                     return f'Contact "{name}" has been modified. New birthday: "{value}"'
@@ -423,16 +509,44 @@ def contact_remover() -> str:
     name = input('Enter contact name: ')
     for record_name, record in address_book.records.items():
         if record.name.name == name:
-            del address_book.records[record_name]
-            return f'Contact "{name}" has been removed\n'
-    return f'Contact "{name}" not found\n'
+            print(f'Contact found: {record.name.name}')
+            choice = input(
+                'Enter the field to remove (1- contact, 2 - number, 3 - email, 4 - adress, 5 - birthday) ')
+            if choice == '1':
+                del address_book.records[record_name]
+                return f'Contact "{name} has been removed'
+            elif choice == '2':
+                print('Phone numbers:')
+                for i, phone in enumerate(record.phones):
+                    print(f'{i+1}. {phone}')
+                phone_choice = int(input(
+                    'Enter the number of the phone to remove, or enter 0 to remove all phone numbers: '))
+                if phone_choice == 0:
+                    record.phones = []
+                    return f'All phone numbers removed from contact {name}'
+                elif 1 <= phone_choice <= len(record.phones):
+                    del record.phones[phone_choice - 1]
+                    return f'Phone number {phone_choice} removed from contact {name}'
+                else:
+                    return 'Invalid phone number choice'
+            elif choice == '3':
+                record.email = None
+                return f'Email removed from contact {name}'
+            elif choice == '4':
+                record.address = None
+                return f'Address removed from contact {name}'
+            elif choice == '5':
+                record.birthday = None
+                return f'Birthday removed from contact {name}'
+            else:
+                return f'Invalid choice'
+        return f'Contact "{name}" not found'
 
 
 def days_to_birthdays() -> str:
     days = int(input('Enter the number of days: '))
     today = datetime.today().date()
-    contacts_in_days = []
-    has_birthday = False
+    result = ''
 
     for record in address_book.records.values():
         if record.birthday is not None:
@@ -444,14 +558,11 @@ def days_to_birthdays() -> str:
 
             days_to_birthday = (dob_this_year - today).days
             if days_to_birthday <= days:
-                contacts_in_days.append(record)
-                has_birthday = True
-        if not has_birthday:
-            return "\nNo contacts with upcoming birthdays\n"
-        result = f"\nContacts with upcoming birthdays in the next {days} days:"
-        for record in contacts_in_days:
-            result += '\n' + str(record)
-            return result
+                result += f'\n{record}'
+    if result == '':
+        return "\nNo contacts with upcoming birthdays\n"
+    else:
+        return f"\nContacts with upcoming birthdays in the next {days} days:\n{result}"
 
 
 # Notes processing
